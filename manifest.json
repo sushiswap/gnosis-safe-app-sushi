@@ -1,0 +1,9 @@
+{
+    "name": "SushiOperational",
+    "description": "Hacking Gnosis to do work",
+    "iconPath": "myAppIcon.svg",
+    "providedBy": {
+        "name": "BoringCrypto",
+        "url": "https://app.boring.finance"
+    }
+}

@@ -1,1 +1,149 @@
 Hello degen world!
+<script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.2.11/dist/web3.min.js"></script>
+<script src="js/index.js"></script>
+<script src="js/contracts.js"></script>
+<script src="js/web3manager.js"></script>
+<script>
+    let manager = new Web3Manager();
+
+    let sdk = initSdk();
+    window.sdk = sdk;
+    console.log(sdk);
+
+    const onSafeInfo = (safeInfo) => {
+        console.log(safeInfo);
+    };
+
+    const onTransactionConfirmation = ({ requestId, safeTxHash }) => {
+        console.log(requestId, safeTxHash);
+    };
+
+    const onTransactionRejection = ({ requestId }) => {
+        console.log(requestId);
+    };
+
+    sdk.addListeners({
+        onSafeInfo,
+        onTransactionConfirmation,
+        onTransactionRejection,
+    });
+
+    let web3 = manager.web3;
+    const txs = [];
+    const z18 = "000000000000000000";
+    const z6 = "000000";
+    const hour = 60n * 60n;
+    const day = 24n * hour;
+    const year = 365n * day;
+    const now = BigInt(new Date().getTime()) / 1000n;
+    const sablier_address = "0xbd6a40Bb904aEa5a49c59050B5395f7484A4203d";
+    const sushi_address = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2";
+    const usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const chef_address = "0xc2edad668740f1aa35e4d8f227fb8e17dca888cd";
+    console.log(web3.sablier);
+
+    function createSalary(employee, salary, token, start, duration) {
+        good_salary = BigInt(salary) / BigInt(duration) * BigInt(duration);
+        txs.push({
+            to: token,
+            value: 0,
+            data: web3.contract("erc20", token).methods.approve(sablier_address, good_salary).encodeABI(),
+        });
+        txs.push({
+            to: sablier_address,
+            value: 0,
+            data: web3.sablier.createSalary(employee, good_salary, token, start, start + duration).encodeABI(),
+        });
+    }
+
+    function transfer(token, to, amount) {
+        txs.push({
+            to: token,
+            value: 0,
+            data: web3.contract("erc20", token).methods.transfer(to, amount).encodeABI(),
+        });
+    }
+
+    function queueTimeLock(to, signature, call) {
+        txs.push({
+            to: "0x9a8541Ddf3a932a9A922B607e9CF7301f1d47bD1",
+            value: 0,
+            data: web3.timelock.queueTransaction(to, 0, signature, "0x" + call.encodeABI().slice(10), now + (2n * day) + hour).encodeABI(),
+        });
+    }
+
+    function executeTimeLock(to, value, signature, data, eta) {
+        txs.push({
+            to: "0x9a8541Ddf3a932a9A922B607e9CF7301f1d47bD1",
+            value: 0,
+            data: web3.timelock.executeTransaction(to, value, signature, data, eta).encodeABI(),
+        });
+    }
+
+    function addPool(address, alloc) {
+        queueTimeLock(
+            chef_address,
+            "add(uint256,address,bool)",
+            web3.chef.add(alloc, address, false)
+        )
+    }
+
+    function setPool(pid, alloc) {
+        queueTimeLock(
+            chef_address,
+            "set(uint256,uint256,bool)",
+            web3.chef.set(pid, alloc, false)
+        )
+    }
+
+    function massUpdatePools() {
+        queueTimeLock(
+            chef_address,
+            "massUpdatePools()",
+            web3.chef.massUpdatePools()
+        )
+    }
+
+    addPool("0x0000000000000000000000000000000000000000", 8224);
+
+    /*executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "massUpdatePools()", "0x", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "set(uint256,uint256,bool)", "0x000000000000000000000000000000000000000000000000000000000000001300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c80000000000000000000000006463bd6026a2e7bfab5851b62969a92f7cca0eb60000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c80000000000000000000000002dbc7dd86c6cd87b525bd54ea73ebeebbc307f680000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c8000000000000000000000000ba13afecda9beb75de5c56bbaf696b880a5a50dd0000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c800000000000000000000000068c6d02d44e16f1c20088731ab032f849100d70f0000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c8000000000000000000000000269db91fc3c7fcc275c2e6f22e5552504512811c0000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c8000000000000000000000000742c15d71ea7444964bc39b0ed729b3729adc3610000000000000000000000000000000000000000000000000000000000000000", 1602174831);
+    executeTimeLock("0xc2edad668740f1aa35e4d8f227fb8e17dca888cd", 0, "add(uint256,address,bool)", "0x00000000000000000000000000000000000000000000000000000000000000c8000000000000000000000000d75ea151a61d06868e31f8988d28dfe5e9df57b40000000000000000000000000000000000000000000000000000000000000000", 1602181529);*/
+
+
+
+    /*    0x6463bd6026a2e7bfab5851b62969a92f7cca0eb6 200 31 HEGIC - ETH
+        0x2dbc7dd86c6cd87b525bd54ea73ebeebbc307f68 200 32 WBTC - TBTC
+        0xba13afecda9beb75de5c56bbaf696b880a5a50dd 200 33 MKR - ETH
+        0x68c6d02d44e16f1c20088731ab032f849100d70f 200 34 CORE - ETH
+        0x269db91fc3c7fcc275c2e6f22e5552504512811c 200 35 PICKLE - ETH
+        0x742c15d71ea7444964bc39b0ed729b3729adc361 200 36 OMG - ETH
+        0xD75EA151a61d06868E31F8988D28DFE5E9df57B4 200 37 AAVE - ETH*/
+    /*setPool(19, 0);
+    setPool(20, 0);
+    setPool(21, 0);
+    setPool(23, 0);
+    setPool(26, 0);
+    setPool(27, 0);
+    setPool(28, 0);
+    massUpdatePools();*/
+
+    //transfer(sushi_address, "0x35F115dCb8f52c9fBD8d025cb2dDC1E1e2dC4357", "5000" + z18);
+    //createSalary("0xC3598d91844B061195136600AD243b077Cc164e2", "120000" + z6, usdc_address, now + hour, year);
+
+    // Send to Safe-multisig
+    const message = sdk.sendTransactions(txs);
+    console.log(message.requestId);    
+</script>
